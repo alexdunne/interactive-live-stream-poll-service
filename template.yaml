@@ -25,9 +25,9 @@ Resources:
           Properties:
             Path: /polls
             Method: POST
-    Policies:
-      - DynamoDBCrudPolicy:
-          TableName: !Ref InteractiveLiveStreamPoll
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InteractiveLiveStreamPoll
 
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
@@ -42,6 +42,9 @@ Resources:
           KeyType: HASH
         - AttributeName: SK
           KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
       TableName: "InteractiveLiveStreamPoll"
 Outputs:
   CreatePollAPI:
