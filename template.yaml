@@ -46,6 +46,7 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
       TableName: "InteractiveLiveStreamPoll"
+      
 Outputs:
   CreatePollAPI:
     Description: "Create poll endpoint"
