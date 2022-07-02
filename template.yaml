@@ -8,7 +8,7 @@ Globals:
     Timeout: 5
     Environment:
       Variables:
-        TABLE_NAME: InteractiveLiveStreamPoll
+        POLL_TABLE_NAME: InteractiveLiveStreamPoll
 
 Resources:
   CreatePollFunction:
