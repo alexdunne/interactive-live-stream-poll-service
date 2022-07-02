@@ -1,0 +1,3 @@
+{
+  "body": "{\"question\": \"How many legs does a spider have?\", \"options\": [\"2\", \"4\", \"6\", \"8\"], \"channelARN\": \"arn::aws::something-something/24348957932\" }"
+}
