@@ -14,7 +14,7 @@ Resources:
   CreatePollFunction:
     Type: AWS::Serverless::Function 
     Properties:
-      CodeUri: create-poll/
+      CodeUri: handlers/create-poll/
       Handler: create-poll
       Runtime: go1.x
       Architectures:
