@@ -29,6 +29,28 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref InteractiveLiveStreamPoll
 
+  BroadcastPoll:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: handlers/broadcast-poll/
+      Handler: broadcast-poll
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      Policies: 
+        - AWSLambdaDynamoDBExecutionRole
+        - IVSAccessPolicy
+      Events:
+        Stream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt InteractiveLiveStreamPoll.StreamArn
+            BatchSize: 1
+            StartingPosition: LATEST
+            FilterCriteria:
+              Filters:
+                - Pattern: "{\"data\": { \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Poll\"]}} } }}"
+
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -46,6 +68,22 @@ Resources:
         ReadCapacityUnits: 1
         WriteCapacityUnits: 1
       TableName: "InteractiveLiveStreamPoll"
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
+
+  IVSAccessPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: IVSAccess
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'ivs:ListChannels'
+              - 'ivs:GetChannel'
+              - 'ivs:PutMetadata'
+            Resource: '*'
       
 Outputs:
   CreatePollAPI:

@@ -1,0 +1,63 @@
+{
+  "Records": [
+    {
+      "dynamodb": {
+        "NewImage": {
+          "id": {
+            "S": "abc"
+          },
+          "question": {
+            "S": "How many legs does a spider have?"
+          },
+          "options": {
+            "L": [
+              {
+                "M": {
+                  "id": {
+                    "S": "e8efc582-0003-44a1-a71e-3dbf3b536503"
+                  },
+                  "label": {
+                    "S": "2"
+                  }
+                }
+              },
+              {
+                "M": {
+                  "id": {
+                    "S": "9e7b930a-d3fe-48aa-a015-d060338b58a3"
+                  },
+                  "label": {
+                    "S": "4"
+                  }
+                }
+              },
+              {
+                "M": {
+                  "id": {
+                    "S": "0687f60c-13d6-4e8f-b09d-6b71aea99a5b"
+                  },
+                  "label": {
+                    "S": "6"
+                  }
+                }
+              },
+              {
+                "M": {
+                  "id": {
+                    "S": "f6356b11-c029-43e6-a6be-7e259d2cc4cd"
+                  },
+                  "label": {
+                    "S": "8"
+                  }
+                }
+              }
+            ]
+          },
+          "channelARN": {
+            "S": "arn:aws:ivs:us-east-1:827871855799:channel/nhogiNuCPxNv"
+          }
+        }
+      }
+    }
+  ]
+}
