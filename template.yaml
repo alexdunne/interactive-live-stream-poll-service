@@ -51,6 +51,24 @@ Resources:
               Filters:
                 - Pattern: "{\"data\": { \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Poll\"]}} } }}"
 
+  GetPollFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: handlers/get-poll/
+      Handler: get-poll
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      Events:
+        CatchAll:
+          Type: Api 
+          Properties:
+            Path: /polls/:id
+            Method: GET
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InteractiveLiveStreamPoll
+
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
     Properties:

@@ -47,8 +47,8 @@ type pollOption struct {
 }
 
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	tableName, found := os.LookupEnv(_tableNameEnv)
-	if !found {
+	tableName, ok := os.LookupEnv(_tableNameEnv)
+	if !ok {
 		log.Printf("error environment variable %s not set", _tableNameEnv)
 		return api.InternalServerErrorResponse(), nil
 	}
