@@ -23,7 +23,7 @@ const _tableNameEnv = "POLL_TABLE_NAME"
 type createPollRequest struct {
 	Question   string   `json:"question" validate:"required,min=1,max=100"`
 	Options    []string `json:"options" validate:"required,dive,required,min=1,max=100"`
-	ChannelARN string   `json:"channelARN" validate:"required,regexp=^arn:aws:[is]vs:[a-z0-9-]+:[0-9]+:channel/[a-zA-Z0-9-]+$"`
+	ChannelARN string   `json:"channelARN" validate:"required"`
 }
 
 type createPollResponse struct {
