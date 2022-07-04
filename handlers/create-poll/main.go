@@ -39,6 +39,7 @@ type poll struct {
 	Options              []pollOption   `json:"options"`
 	ChannelARN           string         `json:"channelARN"`
 	AggregatedVoteTotals map[string]int `json:"aggregatedVoteTotals"`
+	Test                 string
 }
 
 type pollOption struct {

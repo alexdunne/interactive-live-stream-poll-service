@@ -5,6 +5,7 @@ test:
 .PHONY: install
 install:
 	go get ./...
+	go install github.com/githubnemo/CompileDaemon
 
 .PHONY: clean
 clean:
@@ -24,6 +25,10 @@ handlers:
 	GOOS=linux GOARCH=amd64 $(MAKE) broadcast-poll
 	GOOS=linux GOARCH=amd64 $(MAKE) create-poll
 	GOOS=linux GOARCH=amd64 $(MAKE) get-poll
+
+.PHONY: watch
+watch:
+	CompileDaemon -build="make handlers"
 
 .PHONY: build
 build: clean handlers
