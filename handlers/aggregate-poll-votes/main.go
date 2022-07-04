@@ -69,7 +69,7 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 						S: aws.String(pollDatabaseID),
 					},
 				},
-				UpdateExpression: aws.String("set aggregatedVoteTotal.#s= :val"),
+				UpdateExpression: aws.String("set aggregatedVoteTotal.#s = aggregatedVoteTotal.#s + :val"),
 				ExpressionAttributeNames: map[string]*string{
 					"#s": aws.String(answerID),
 				},
