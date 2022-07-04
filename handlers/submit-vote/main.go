@@ -32,6 +32,7 @@ type vote struct {
 	SK       string `json:"SK"`
 	ID       string `json:"id"`
 	ItemType string `json:"itemType"`
+	PollID   string `json:"pollId"`
 	Answer   string `json:"answer"`
 }
 
@@ -96,6 +97,7 @@ func createVoteFromRequest(req submitPollRequest) vote {
 		SK:       fmt.Sprintf("USER#%s", req.UserID),
 		ID:       fmt.Sprintf("VOTE#%s", uuid.NewString()),
 		ItemType: "Vote",
+		PollID:   req.PollID,
 		Answer:   req.Answer,
 	}
 }

@@ -94,6 +94,28 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref InteractiveLiveStreamPoll
 
+  AggregatePollVotes:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: ./bin/aggregate-poll-votes
+      CodeUri: ./
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      Policies:
+        - AWSLambdaDynamoDBExecutionRole
+      Events:
+        Stream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt InteractiveLiveStreamPoll.StreamArn
+            BatchSize: 5
+            MaximumBatchingWindowInSeconds: 10
+            StartingPosition: LATEST
+            FilterCriteria:
+              Filters:
+                - Pattern: "{\"data\": { \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Vote\"]}} } }}"
+
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
     Properties:

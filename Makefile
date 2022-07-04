@@ -11,6 +11,9 @@ install:
 clean:
 	rm -rf ./bin
 
+aggregate-poll-votes: ./handlers/aggregate-poll-votes/main.go
+	go build -o ./bin/aggregate-poll-votes ./handlers/aggregate-poll-votes
+
 broadcast-poll: ./handlers/broadcast-poll/main.go
 	go build -o ./bin/broadcast-poll ./handlers/broadcast-poll
 
@@ -25,6 +28,7 @@ submit-vote: ./handlers/submit-vote/main.go
 
 .PHONY: handlers
 handlers:
+	GOOS=linux GOARCH=amd64 $(MAKE) aggregate-poll-votes
 	GOOS=linux GOARCH=amd64 $(MAKE) broadcast-poll
 	GOOS=linux GOARCH=amd64 $(MAKE) create-poll
 	GOOS=linux GOARCH=amd64 $(MAKE) get-poll
