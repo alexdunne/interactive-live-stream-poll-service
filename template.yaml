@@ -76,6 +76,24 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref InteractiveLiveStreamPoll
 
+  SubmitVoteFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Handler: ./bin/submit-vote
+      CodeUri: ./
+      Runtime: go1.x
+      Architectures:
+        - x86_64
+      Events:
+        CatchAll:
+          Type: Api 
+          Properties:
+            Path: /polls/{id}/votes
+            Method: POST
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InteractiveLiveStreamPoll
+
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
     Properties:

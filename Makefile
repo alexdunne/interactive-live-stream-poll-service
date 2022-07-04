@@ -20,11 +20,15 @@ create-poll: ./handlers/create-poll/main.go
 get-poll: ./handlers/get-poll/main.go
 	go build -o ./bin/get-poll ./handlers/get-poll
 
+submit-vote: ./handlers/submit-vote/main.go
+	go build -o ./bin/submit-vote ./handlers/submit-vote
+
 .PHONY: handlers
 handlers:
 	GOOS=linux GOARCH=amd64 $(MAKE) broadcast-poll
 	GOOS=linux GOARCH=amd64 $(MAKE) create-poll
 	GOOS=linux GOARCH=amd64 $(MAKE) get-poll
+	GOOS=linux GOARCH=amd64 $(MAKE) submit-vote
 
 .PHONY: watch
 watch:
