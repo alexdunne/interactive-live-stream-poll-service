@@ -56,7 +56,7 @@ Resources:
             StartingPosition: LATEST
             FilterCriteria:
               Filters:
-                - Pattern: "{\"data\": { \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Poll\"]}} } }}"
+                - Pattern: "{ \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Poll\"]}} } }"
 
   GetPollFunction:
     Type: AWS::Serverless::Function 
@@ -114,7 +114,7 @@ Resources:
             StartingPosition: LATEST
             FilterCriteria:
               Filters:
-                - Pattern: "{\"data\": { \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Vote\"]}} } }}"
+                - Pattern: "{ \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Vote\"]}} } }"
 
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
@@ -139,4 +139,9 @@ Resources:
 Outputs:
   CreatePollAPI:
     Description: "Create poll endpoint"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/polls/"
+  GetPollAPI:
+    Description: "Get poll endpoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/polls/:id"
+  SubmitVoteAPI:
+    Description: "Create vote endpoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/polls/:id/votes"
