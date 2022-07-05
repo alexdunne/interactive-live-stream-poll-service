@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/api"
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/broadcast"
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/service"
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/validator"
@@ -15,6 +16,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/ivs"
 )
 
 const _tableNameEnv = "POLL_TABLE_NAME"
@@ -42,9 +44,14 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		return api.InternalServerErrorResponse(), nil
 	}
 
-	db := dynamodb.New(session.Must(session.NewSession()))
+	sess := session.Must(session.NewSession())
+	db := dynamodb.New(sess)
+	ivsSvc := ivs.New(sess)
+
 	repo := repository.New(tableName, db)
-	svc := service.New(repo)
+	broadcaster := broadcast.New(ivsSvc)
+
+	svc := service.New(repo, broadcaster)
 
 	var createPollReq createPollRequest
 	if err := json.Unmarshal([]byte(request.Body), &createPollReq); err != nil {

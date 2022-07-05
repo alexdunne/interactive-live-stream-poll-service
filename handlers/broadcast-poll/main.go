@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/utils"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-sdk-go/service/ivs"
 )
 
@@ -31,7 +30,7 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 
 	for _, record := range event.Records {
 		var p poll
-		if err := unmarshalStreamImage(record.Change.NewImage, &p); err != nil {
+		if err := utils.UnmarshalStreamImage(record.Change.NewImage, &p); err != nil {
 			log.Printf("error unmarshalling stream event into a poll: %s", err)
 			continue
 		}
@@ -60,26 +59,6 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 	}
 
 	return nil
-}
-
-func unmarshalStreamImage(attribute map[string]events.DynamoDBAttributeValue, out interface{}) error {
-	dbAttrMap := make(map[string]*dynamodb.AttributeValue)
-
-	for k, v := range attribute {
-
-		var dbAttr dynamodb.AttributeValue
-
-		bytes, marshalErr := v.MarshalJSON()
-		if marshalErr != nil {
-			return marshalErr
-		}
-
-		json.Unmarshal(bytes, &dbAttr)
-		dbAttrMap[k] = &dbAttr
-	}
-
-	return dynamodbattribute.UnmarshalMap(dbAttrMap, out)
-
 }
 
 func main() {

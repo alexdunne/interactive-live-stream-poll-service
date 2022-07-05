@@ -14,6 +14,11 @@ type Repo interface {
 	GetPoll(ctx context.Context, pollID string) (repository.DatabasePoll, error)
 	CreatePoll(ctx context.Context, poll repository.NewPoll) (repository.DatabasePoll, error)
 	CreatePollVote(ctx context.Context, vote repository.NewPollVote) (repository.DatabasePollVote, error)
+	IncrementPollTotals(ctx context.Context, pollID string, answerIncrements repository.DatabasePollTotals) (repository.DatabasePollTotals, error)
+}
+
+type Broadcaster interface {
+	Broadcast(ctx context.Context, channelARN string, data string) error
 }
 
 type Poll struct {
@@ -30,12 +35,14 @@ type PollOption struct {
 }
 
 type service struct {
-	repo Repo
+	repo        Repo
+	broadcaster Broadcaster
 }
 
-func New(r Repo) *service {
+func New(r Repo, b Broadcaster) *service {
 	return &service{
-		repo: r,
+		repo:        r,
+		broadcaster: b,
 	}
 }
 
