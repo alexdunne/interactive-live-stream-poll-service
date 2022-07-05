@@ -86,7 +86,7 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 
 			update.updateExprParts = append(
 				update.updateExprParts,
-				fmt.Sprintf("aggregatedVoteTotal.%s = aggregatedVoteTotal.%s + %s", attrName, attrName, attrValKey),
+				fmt.Sprintf("aggregatedVoteTotals.%s = aggregatedVoteTotals.%s + %s", attrName, attrName, attrValKey),
 			)
 
 			if _, ok := update.attrNames[attrName]; !ok {
