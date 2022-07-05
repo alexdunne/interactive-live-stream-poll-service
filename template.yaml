@@ -38,13 +38,12 @@ Resources:
       Architectures:
         - x86_64
       Policies: 
-        - AWSLambdaDynamoDBExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InteractiveLiveStreamPoll
         - Version: '2012-10-17'
           Statement:
           - Effect: Allow
             Action:
-              - 'ivs:ListChannels'
-              - 'ivs:GetChannel'
               - 'ivs:PutMetadata'
             Resource: '*'
       Events:
@@ -103,7 +102,14 @@ Resources:
       Architectures:
         - x86_64
       Policies:
-        - AWSLambdaDynamoDBExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref InteractiveLiveStreamPoll
+        - Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'ivs:PutMetadata'
+            Resource: '*'
       Events:
         Stream:
           Type: DynamoDB
