@@ -93,7 +93,9 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 				update.attrNames[attrName] = aws.String(answerID)
 			}
 			if _, ok := update.attrValues[attrValKey]; !ok {
-				update.attrNames[attrName] = aws.String(strconv.Itoa(total))
+				update.attrValues[attrName] = &dynamodb.AttributeValue{
+					N: aws.String(strconv.Itoa(total)),
+				}
 			}
 
 			index = index + 1
