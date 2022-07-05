@@ -139,6 +139,7 @@ Resources:
 Outputs:
   CreatePollAPI:
     Description: "Create poll endpoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/polls"
   GetPollAPI:
     Description: "Get poll endpoint"
     Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/polls/:id"
