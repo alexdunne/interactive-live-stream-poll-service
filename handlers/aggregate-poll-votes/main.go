@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -51,6 +52,19 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 
 	for pollID, totals := range totalsPerPoll {
 		pollDatabaseID := fmt.Sprintf("POLL#%s", pollID)
+
+		repo := repository.New(tableName, db)
+
+		poll, err := repo.GetPoll(ctx, pollID)
+		if err != nil {
+			if err == repository.ErrPollNotFound {
+				log.Printf("unable to find poll for id %s", pollID)
+				continue
+			}
+
+			log.Printf("error getting poll item: %s", err)
+			continue
+		}
 
 		type pollUpdate struct {
 			updateExprParts []string
@@ -117,7 +131,7 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 
 		totalsMetadata := metadata{
 			Data: pollResult{
-				ID:     pollID,
+				ID:     poll.ID,
 				Totals: updateItemRes.AggregatedVoteTotals,
 			},
 		}
@@ -129,7 +143,7 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 		}
 
 		_, err = ivsSvc.PutMetadataWithContext(ctx, &ivs.PutMetadataInput{
-			ChannelArn: &p.ChannelARN,
+			ChannelArn: &poll.ChannelARN,
 			Metadata:   aws.String(string(jsonMetadata)),
 		})
 		if err != nil {

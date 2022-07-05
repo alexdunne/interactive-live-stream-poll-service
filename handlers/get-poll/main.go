@@ -1,26 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/api"
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
 const _tableNameEnv = "POLL_TABLE_NAME"
-
-type getPollResponse struct {
-	Data poll `json:"data"`
-}
 
 type poll struct {
 	ID       string       `json:"id"`
@@ -33,7 +28,11 @@ type pollOption struct {
 	Label string `json:"label"`
 }
 
-func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+type getPollResponse struct {
+	Data poll `json:"data"`
+}
+
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	pollID, ok := request.PathParameters["id"]
 	if !ok {
 		return events.APIGatewayProxyResponse{
@@ -50,43 +49,19 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	db := dynamodb.New(session.Must(session.NewSession()))
 
-	pollDatabaseKey := fmt.Sprintf("POLL#%s", pollID)
+	repo := repository.New(tableName, db)
 
-	result, err := db.GetItem(&dynamodb.GetItemInput{
-		TableName: aws.String(tableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			"PK": {
-				S: aws.String(pollDatabaseKey),
-			},
-			"SK": {
-				S: aws.String(pollDatabaseKey),
-			},
-		},
-	})
+	dbPoll, err := repo.GetPoll(ctx, pollID)
 	if err != nil {
+		if err == repository.ErrPollNotFound {
+			return api.InternalServerErrorResponse(), nil
+		}
+
 		log.Printf("error getting poll item: %s", err)
-
-		return events.APIGatewayProxyResponse{
-			Body:       http.StatusText(http.StatusNotFound),
-			StatusCode: http.StatusNotFound,
-		}, nil
-	}
-
-	if result.Item == nil {
-		return events.APIGatewayProxyResponse{
-			Body:       http.StatusText(http.StatusNotFound),
-			StatusCode: http.StatusNotFound,
-		}, nil
-	}
-
-	foundPoll := poll{}
-	err = dynamodbattribute.UnmarshalMap(result.Item, &foundPoll)
-	if err != nil {
-		log.Printf("error unmarshalling poll item: %s", err)
 		return api.InternalServerErrorResponse(), nil
 	}
 
-	res, err := json.Marshal(getPollResponse{Data: foundPoll})
+	res, err := json.Marshal(mapPollToResponse(dbPoll))
 	if err != nil {
 		log.Printf("error marshalling poll response: %s", err)
 		return api.InternalServerErrorResponse(), nil
@@ -96,6 +71,24 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		Body:       string(res),
 		StatusCode: http.StatusOK,
 	}, nil
+}
+
+func mapPollToResponse(dbPoll repository.Poll) getPollResponse {
+	var po []pollOption
+	for _, opt := range dbPoll.Options {
+		po = append(po, pollOption{
+			ID:    opt.ID,
+			Label: opt.Label,
+		})
+	}
+
+	return getPollResponse{
+		Data: poll{
+			ID:       dbPoll.ID,
+			Question: dbPoll.Question,
+			Options:  po,
+		},
+	}
 }
 
 func main() {
