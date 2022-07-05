@@ -13,6 +13,7 @@ var ErrRecordNotFound = errors.New("could not find record")
 type Repo interface {
 	GetPoll(ctx context.Context, pollID string) (repository.DatabasePoll, error)
 	CreatePoll(ctx context.Context, poll repository.NewPoll) (repository.DatabasePoll, error)
+	CreatePollVote(ctx context.Context, vote repository.NewPollVote) (repository.DatabasePollVote, error)
 }
 
 type Poll struct {

@@ -125,7 +125,3 @@ func (r *repo) CreatePoll(ctx context.Context, poll NewPoll) (DatabasePoll, erro
 
 	return dbPoll, nil
 }
-
-func buildPollDatabaseKey(id string) string {
-	return fmt.Sprintf("POLL#%s", id)
-}

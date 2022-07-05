@@ -1,42 +1,32 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/api"
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/service"
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/validator"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"github.com/google/uuid"
 )
 
 const _tableNameEnv = "POLL_TABLE_NAME"
 
-type submitPollRequest struct {
+type submitVoteRequest struct {
 	PollID string `json:"pollId" validate:"required"`
 	// Hacky way to provide a user id whilst we don't have auth
 	UserID string `json:"userId" validate:"required"`
 	Answer string `json:"answer" validate:"required"`
 }
 
-type vote struct {
-	PK       string `json:"PK"`
-	SK       string `json:"SK"`
-	ID       string `json:"id"`
-	ItemType string `json:"itemType"`
-	PollID   string `json:"pollId"`
-	Answer   string `json:"answer"`
-}
-
-func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	pollID, ok := request.PathParameters["id"]
 	if !ok {
 		return events.APIGatewayProxyResponse{
@@ -52,6 +42,8 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	db := dynamodb.New(session.Must(session.NewSession()))
+	repo := repository.New(tableName, db)
+	svc := service.New(repo)
 
 	validate, trans, err := validator.NewValidator("en")
 	if err != nil {
@@ -59,7 +51,7 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return api.InternalServerErrorResponse(), nil
 	}
 
-	var submitPollReq submitPollRequest
+	var submitPollReq submitVoteRequest
 	if err := json.Unmarshal([]byte(request.Body), &submitPollReq); err != nil {
 		log.Printf("error unmarshalling request body: %s", err)
 		return api.InternalServerErrorResponse(), nil
@@ -80,47 +72,19 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		}, nil
 	}
 
-	voteSubmission := createVoteFromRequest(submitPollReq)
-
-	if err := storeVote(db, tableName, voteSubmission); err != nil {
+	_, err = svc.CreatePollVote(ctx, service.NewPollVote{
+		PollID: submitPollReq.PollID,
+		UserID: submitPollReq.UserID,
+		Answer: submitPollReq.Answer,
+	})
+	if err != nil {
+		log.Printf("error creating poll vote: %s", err)
 		return api.InternalServerErrorResponse(), nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusAccepted,
 	}, nil
-}
-
-func createVoteFromRequest(req submitPollRequest) vote {
-	return vote{
-		PK:       fmt.Sprintf("POLL#%s", req.PollID),
-		SK:       fmt.Sprintf("USER#%s", req.UserID),
-		ID:       fmt.Sprintf("VOTE#%s", uuid.NewString()),
-		ItemType: "Vote",
-		PollID:   req.PollID,
-		Answer:   req.Answer,
-	}
-}
-
-func storeVote(db *dynamodb.DynamoDB, tableName string, v vote) error {
-	av, err := dynamodbattribute.MarshalMap(v)
-	if err != nil {
-		log.Printf("error marshalling new vote: %s", err)
-		return err
-	}
-
-	input := &dynamodb.PutItemInput{
-		Item:      av,
-		TableName: aws.String(tableName),
-	}
-
-	_, err = db.PutItem(input)
-	if err != nil {
-		log.Printf("error calling PutItem for vote: %s", err)
-		return err
-	}
-
-	return nil
 }
 
 func main() {
