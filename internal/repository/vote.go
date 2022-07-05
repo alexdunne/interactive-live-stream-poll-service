@@ -45,7 +45,7 @@ func (r *repo) CreatePollVote(ctx context.Context, v NewPollVote) (DatabasePollV
 
 	av, err := dynamodbattribute.MarshalMap(dbVote)
 	if err != nil {
-		return DatabasePollVote{}, fmt.Errorf("error marshalling new vote: %w", err)
+		return DatabasePollVote{}, fmt.Errorf("marshalling new vote: %w", err)
 	}
 
 	input := &dynamodb.PutItemInput{
@@ -55,7 +55,7 @@ func (r *repo) CreatePollVote(ctx context.Context, v NewPollVote) (DatabasePollV
 
 	_, err = r.db.PutItem(input)
 	if err != nil {
-		return DatabasePollVote{}, fmt.Errorf("error calling PutItem for vote: %w", err)
+		return DatabasePollVote{}, fmt.Errorf("calling PutItem for vote: %w", err)
 	}
 
 	return dbVote, nil
@@ -72,12 +72,12 @@ func (r *repo) IncrementPollTotals(ctx context.Context, pollID string, answerInc
 
 	res, err := r.db.UpdateItemWithContext(ctx, input)
 	if err != nil {
-		return nil, fmt.Errorf("error updating vote aggregate totals %w", err)
+		return nil, fmt.Errorf("updating vote aggregate totals %w", err)
 	}
 
 	var updateItemRes updateItemResponse
 	if err := dynamodbattribute.UnmarshalMap(res.Attributes, &updateItemRes); err != nil {
-		return nil, fmt.Errorf("error unmarshalling update item output attributes %w", err)
+		return nil, fmt.Errorf("unmarshalling update item output attributes %w", err)
 
 	}
 
@@ -91,10 +91,13 @@ func (r *repo) getPollAnswerIncrementInput(pollKey string, pollAnswerIncrements 
 	attrValues := make(map[string]*dynamodb.AttributeValue)
 
 	for answerID, incr := range pollAnswerIncrements {
-		attrName := fmt.Sprintf("aggregatedVoteTotals.#s%d", index)
+		attrName := fmt.Sprintf("#s%d", index)
 		attrValKey := fmt.Sprintf(":v%d", index)
 
-		updateExprParts = append(updateExprParts, fmt.Sprintf("%s = %s + %s", attrName, attrName, attrValKey))
+		updateExprParts = append(
+			updateExprParts,
+			fmt.Sprintf("aggregatedVoteTotals.%s = aggregatedVoteTotals.%s + %s", attrName, attrName, attrValKey),
+		)
 		attrNames[attrName] = aws.String(answerID)
 		attrValues[attrValKey] = &dynamodb.AttributeValue{
 			N: aws.String(strconv.Itoa(incr)),
