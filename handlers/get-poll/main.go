@@ -9,6 +9,7 @@ import (
 
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/api"
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/service"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -17,7 +18,7 @@ import (
 
 const _tableNameEnv = "POLL_TABLE_NAME"
 
-type poll struct {
+type pollOverview struct {
 	ID       string       `json:"id"`
 	Question string       `json:"question"`
 	Options  []pollOption `json:"options"`
@@ -29,7 +30,7 @@ type pollOption struct {
 }
 
 type getPollResponse struct {
-	Data poll `json:"data"`
+	Data pollOverview `json:"data"`
 }
 
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -48,20 +49,23 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}
 
 	db := dynamodb.New(session.Must(session.NewSession()))
-
 	repo := repository.New(tableName, db)
+	svc := service.New(repo)
 
-	dbPoll, err := repo.GetPoll(ctx, pollID)
+	poll, err := svc.GetPoll(ctx, pollID)
 	if err != nil {
-		if err == repository.ErrPollNotFound {
-			return api.InternalServerErrorResponse(), nil
+		if err == service.ErrRecordNotFound {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Body:       http.StatusText(http.StatusNotFound),
+			}, nil
 		}
 
 		log.Printf("error getting poll item: %s", err)
 		return api.InternalServerErrorResponse(), nil
 	}
 
-	res, err := json.Marshal(mapPollToResponse(dbPoll))
+	res, err := json.Marshal(mapPollToResponse(poll))
 	if err != nil {
 		log.Printf("error marshalling poll response: %s", err)
 		return api.InternalServerErrorResponse(), nil
@@ -73,9 +77,9 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}, nil
 }
 
-func mapPollToResponse(dbPoll repository.DatabasePoll) getPollResponse {
+func mapPollToResponse(p service.Poll) getPollResponse {
 	var po []pollOption
-	for _, opt := range dbPoll.Options {
+	for _, opt := range p.Options {
 		po = append(po, pollOption{
 			ID:    opt.ID,
 			Label: opt.Label,
@@ -83,9 +87,9 @@ func mapPollToResponse(dbPoll repository.DatabasePoll) getPollResponse {
 	}
 
 	return getPollResponse{
-		Data: poll{
-			ID:       dbPoll.ID,
-			Question: dbPoll.Question,
+		Data: pollOverview{
+			ID:       p.ID,
+			Question: p.Question,
 			Options:  po,
 		},
 	}

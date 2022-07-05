@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
 )
 
+var ErrRecordNotFound = errors.New("could not find record")
+
 type Repo interface {
+	GetPoll(ctx context.Context, pollID string) (repository.DatabasePoll, error)
 	CreatePoll(ctx context.Context, poll repository.NewPoll) (repository.DatabasePoll, error)
 }
 
@@ -34,6 +38,19 @@ func New(r Repo) *service {
 	}
 }
 
+func (s *service) GetPoll(ctx context.Context, pollID string) (Poll, error) {
+	poll, err := s.repo.GetPoll(ctx, pollID)
+	if err != nil {
+		if err == repository.ErrPollNotFound {
+			return Poll{}, ErrRecordNotFound
+		}
+
+		return Poll{}, fmt.Errorf("getting poll: %w", err)
+	}
+
+	return mapDatabasePollToPoll(poll), nil
+}
+
 type NewPoll struct {
 	Question   string
 	Options    []string
@@ -50,8 +67,12 @@ func (s *service) CreatePoll(ctx context.Context, poll NewPoll) (Poll, error) {
 		return Poll{}, fmt.Errorf("creating new poll: %w", err)
 	}
 
+	return mapDatabasePollToPoll(newPoll), nil
+}
+
+func mapDatabasePollToPoll(dbPoll repository.DatabasePoll) Poll {
 	var opts []PollOption
-	for _, o := range newPoll.Options {
+	for _, o := range dbPoll.Options {
 		opts = append(opts, PollOption{
 			ID:    o.ID,
 			Label: o.Label,
@@ -59,10 +80,10 @@ func (s *service) CreatePoll(ctx context.Context, poll NewPoll) (Poll, error) {
 	}
 
 	return Poll{
-		ID:                   newPoll.ID,
-		Question:             newPoll.Question,
+		ID:                   dbPoll.ID,
+		Question:             dbPoll.Question,
 		Options:              opts,
-		ChannelARN:           newPoll.ChannelARN,
-		AggregatedVoteTotals: newPoll.AggregatedVoteTotals,
-	}, nil
+		ChannelARN:           dbPoll.ChannelARN,
+		AggregatedVoteTotals: dbPoll.AggregatedVoteTotals,
+	}
 }
