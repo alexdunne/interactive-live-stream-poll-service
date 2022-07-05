@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/alexdunne/interactive-live-stream-poll-service/internal/broadcast"
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/repository"
 )
 
@@ -58,12 +59,10 @@ func (s *service) IncrementPollTotals(ctx context.Context, pollID string, answer
 		return fmt.Errorf("incrementing totals: %w", err)
 	}
 
-	metadata := broadcastUpdateUpdateMetadata{
-		Data: broadcastPoll{
-			ID:                   poll.ID,
-			AggregatedVoteTotals: newTotals,
-		},
-	}
+	metadata := broadcast.CreateMetadata(broadcastPoll{
+		ID:                   poll.ID,
+		AggregatedVoteTotals: newTotals,
+	})
 
 	jsonMetadata, err := json.Marshal(metadata)
 	if err != nil {
