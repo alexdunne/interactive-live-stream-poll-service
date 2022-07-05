@@ -72,17 +72,21 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 			attrValues      map[string]*dynamodb.AttributeValue
 		}
 
-		update := pollUpdate{}
+		update := pollUpdate{
+			updateExprParts: []string{},
+			attrNames:       make(map[string]*string),
+			attrValues:      make(map[string]*dynamodb.AttributeValue),
+		}
 		index := 0
 
 		// calculate the updates for the poll
 		for answerID, total := range totals {
-			attrName := fmt.Sprintf("#s_%s", index)
-			attrValKey := fmt.Sprintf(":val_%s", index)
+			attrName := fmt.Sprintf("#s_%d", index)
+			attrValKey := fmt.Sprintf(":val_%d", index)
 
 			update.updateExprParts = append(
 				update.updateExprParts,
-				fmt.Sprintf("aggregatedVoteTotal.%s = aggregatedVoteTotal.%s + :val%s", attrName, attrValKey),
+				fmt.Sprintf("aggregatedVoteTotal.%s = aggregatedVoteTotal.%s + :val%s", attrName, attrName, attrValKey),
 			)
 
 			if _, ok := update.attrNames[attrName]; !ok {
