@@ -81,8 +81,8 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 
 		// calculate the updates for the poll
 		for answerID, total := range totals {
-			attrName := fmt.Sprintf("#s_%d", index)
-			attrValKey := fmt.Sprintf(":val_%d", index)
+			attrName := fmt.Sprintf("#s%d", index)
+			attrValKey := fmt.Sprintf(":val%d", index)
 
 			update.updateExprParts = append(
 				update.updateExprParts,
@@ -93,7 +93,7 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 				update.attrNames[attrName] = aws.String(answerID)
 			}
 			if _, ok := update.attrValues[attrValKey]; !ok {
-				update.attrValues[attrName] = &dynamodb.AttributeValue{
+				update.attrValues[attrValKey] = &dynamodb.AttributeValue{
 					N: aws.String(strconv.Itoa(total)),
 				}
 			}
