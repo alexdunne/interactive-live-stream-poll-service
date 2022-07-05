@@ -55,7 +55,7 @@ Resources:
             StartingPosition: LATEST
             FilterCriteria:
               Filters:
-                - Pattern: "{ \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Poll\"]}} } }"
+                - Pattern: "{ \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": { \"itemType\": { \"S\": [\"Poll\"] } } }}"
 
   GetPollFunction:
     Type: AWS::Serverless::Function 
@@ -120,7 +120,7 @@ Resources:
             StartingPosition: LATEST
             FilterCriteria:
               Filters:
-                - Pattern: "{ \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": {\"itemType\": { \"S\" : [\"Vote\"]}} } }"
+                - Pattern: "{ \"eventName\": [\"INSERT\"], \"dynamodb\": { \"NewImage\": { \"itemType\": { \"S\": [\"Vote\"] } } }}"
 
   InteractiveLiveStreamPoll:
     Type: AWS::DynamoDB::Table
