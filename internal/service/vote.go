@@ -40,10 +40,6 @@ type broadcastPoll struct {
 	AggregatedVoteTotals map[string]int `json:"aggregatedVoteTotals"`
 }
 
-type broadcastUpdateUpdateMetadata struct {
-	Data broadcastPoll `json:"data"`
-}
-
 func (s *service) IncrementPollTotals(ctx context.Context, pollID string, answerIncrements map[string]int) error {
 	poll, err := s.repo.GetPoll(ctx, pollID)
 	if err != nil {
