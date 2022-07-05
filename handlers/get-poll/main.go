@@ -73,7 +73,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 	}, nil
 }
 
-func mapPollToResponse(dbPoll repository.Poll) getPollResponse {
+func mapPollToResponse(dbPoll repository.DatabasePoll) getPollResponse {
 	var po []pollOption
 	for _, opt := range dbPoll.Options {
 		po = append(po, pollOption{
