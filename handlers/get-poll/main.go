@@ -21,9 +21,10 @@ import (
 const _tableNameEnv = "POLL_TABLE_NAME"
 
 type pollOverview struct {
-	ID       string       `json:"id"`
-	Question string       `json:"question"`
-	Options  []pollOption `json:"options"`
+	ID                   string         `json:"id"`
+	Question             string         `json:"question"`
+	Options              []pollOption   `json:"options"`
+	AggregatedVoteTotals map[string]int `json:"aggregatedVoteTotals"`
 }
 
 type pollOption struct {
@@ -95,9 +96,10 @@ func mapPollToResponse(p service.Poll) getPollResponse {
 
 	return getPollResponse{
 		Data: pollOverview{
-			ID:       p.ID,
-			Question: p.Question,
-			Options:  po,
+			ID:                   p.ID,
+			Question:             p.Question,
+			Options:              po,
+			AggregatedVoteTotals: p.AggregatedVoteTotals,
 		},
 	}
 }
