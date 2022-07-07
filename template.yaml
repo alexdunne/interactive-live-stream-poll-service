@@ -9,6 +9,11 @@ Globals:
     Environment:
       Variables:
         POLL_TABLE_NAME: InteractiveLiveStreamPoll
+  Api:
+    Cors:
+      AllowMethods: "'*'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
 
 Resources:
   CreatePollFunction:
