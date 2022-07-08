@@ -94,7 +94,7 @@ func (r *repo) getPollAnswerIncrementInput(pollKey string, pollAnswerIncrements 
 
 		builder = builder.Set(
 			expression.Name(attrName),
-			expression.Value(fmt.Sprintf("%s + %d", attrName, incr)),
+			expression.Name(attrName).Plus(expression.Value(incr)),
 		)
 	}
 
