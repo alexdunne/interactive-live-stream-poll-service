@@ -21,7 +21,7 @@ Resources:
     Properties:
       Handler: ./bin/create-poll
       CodeUri: ./
-      Runtime: provided.al2
+      Runtime: go1.x
       Architectures:
         - x86_64
       Events:
@@ -39,7 +39,7 @@ Resources:
     Properties:
       Handler: ./bin/broadcast-poll
       CodeUri: ./
-      Runtime: provided.al2
+      Runtime: go1.x
       Architectures:
         - x86_64
       Policies: 
@@ -67,7 +67,7 @@ Resources:
     Properties:
       Handler: ./bin/get-poll
       CodeUri: ./
-      Runtime: provided.al2
+      Runtime: go1.x
       Architectures:
         - x86_64
       Events:
@@ -85,7 +85,7 @@ Resources:
     Properties:
       Handler: ./bin/submit-vote
       CodeUri: ./
-      Runtime: provided.al2
+      Runtime: go1.x
       Architectures:
         - x86_64
       Events:
@@ -103,7 +103,7 @@ Resources:
     Properties:
       Handler: ./bin/aggregate-poll-votes
       CodeUri: ./
-      Runtime: provided.al2
+      Runtime: go1.x
       Architectures:
         - x86_64
       Policies:
