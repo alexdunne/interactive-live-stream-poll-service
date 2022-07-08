@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,12 +14,25 @@ import (
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/service"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/ivs"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/ivs"
 )
 
 const _tableNameEnv = "POLL_TABLE_NAME"
+
+var db dynamodb.Client
+var ivsClient ivs.Client
+
+func init() {
+	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db = *dynamodb.NewFromConfig(sdkConfig)
+	ivsClient = *ivs.NewFromConfig(sdkConfig)
+}
 
 type pollOverview struct {
 	ID                   string         `json:"id"`
@@ -39,44 +53,31 @@ type getPollResponse struct {
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	pollID, ok := request.PathParameters["id"]
 	if !ok {
-		return events.APIGatewayProxyResponse{
-			Body:       "path parameter 'id' required",
-			StatusCode: http.StatusBadRequest,
-		}, nil
+		return api.ClientError(http.StatusBadRequest, "path parameter 'id' required")
 	}
 
 	tableName, ok := os.LookupEnv(_tableNameEnv)
 	if !ok {
-		log.Printf("error environment variable %s not set", _tableNameEnv)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error environment variable %s not set", _tableNameEnv))
 	}
 
-	sess := session.Must(session.NewSession())
-	db := dynamodb.New(sess)
-	ivsSvc := ivs.New(sess)
-
-	repo := repository.New(tableName, db)
-	broadcaster := broadcast.New(ivsSvc)
+	repo := repository.New(tableName, &db)
+	broadcaster := broadcast.New(&ivsClient)
 
 	svc := service.New(repo, broadcaster)
 
 	poll, err := svc.GetPoll(ctx, pollID)
 	if err != nil {
 		if err == service.ErrRecordNotFound {
-			return events.APIGatewayProxyResponse{
-				StatusCode: http.StatusNotFound,
-				Body:       http.StatusText(http.StatusNotFound),
-			}, nil
+			return api.ClientError(http.StatusNotFound, "poll not found")
 		}
 
-		log.Printf("error getting poll item: %s", err)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error getting poll item: %s", err))
 	}
 
 	res, err := json.Marshal(mapPollToResponse(poll))
 	if err != nil {
-		log.Printf("error marshalling poll response: %s", err)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error marshalling poll response: %s", err))
 	}
 
 	return events.APIGatewayProxyResponse{

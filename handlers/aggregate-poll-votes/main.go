@@ -12,12 +12,25 @@ import (
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/utils"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/ivs"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/ivs"
 )
 
 const _tableNameEnv = "POLL_TABLE_NAME"
+
+var db dynamodb.Client
+var ivsClient ivs.Client
+
+func init() {
+	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db = *dynamodb.NewFromConfig(sdkConfig)
+	ivsClient = *ivs.NewFromConfig(sdkConfig)
+}
 
 type TotalsPerPoll = map[string]map[string]int
 
@@ -32,12 +45,8 @@ func handle(ctx context.Context, event events.DynamoDBEvent) error {
 		return fmt.Errorf("error environment variable %s not set", _tableNameEnv)
 	}
 
-	sess := session.Must(session.NewSession())
-	db := dynamodb.New(sess)
-	ivsSvc := ivs.New(sess)
-
-	repo := repository.New(tableName, db)
-	broadcaster := broadcast.New(ivsSvc)
+	repo := repository.New(tableName, &db)
+	broadcaster := broadcast.New(&ivsClient)
 
 	svc := service.New(repo, broadcaster)
 

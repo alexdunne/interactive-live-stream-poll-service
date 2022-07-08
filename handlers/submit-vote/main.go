@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,12 +15,25 @@ import (
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/validator"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/ivs"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/ivs"
 )
 
 const _tableNameEnv = "POLL_TABLE_NAME"
+
+var db dynamodb.Client
+var ivsClient ivs.Client
+
+func init() {
+	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db = *dynamodb.NewFromConfig(sdkConfig)
+	ivsClient = *ivs.NewFromConfig(sdkConfig)
+}
 
 type submitVoteRequest struct {
 	PollID string `json:"pollId" validate:"required"`
@@ -31,37 +45,27 @@ type submitVoteRequest struct {
 func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	pollID, ok := request.PathParameters["id"]
 	if !ok {
-		return events.APIGatewayProxyResponse{
-			Body:       "path parameter 'id' required",
-			StatusCode: http.StatusBadRequest,
-		}, nil
+		return api.ClientError(http.StatusBadRequest, "path parameter 'id' required")
 	}
 
 	tableName, ok := os.LookupEnv(_tableNameEnv)
 	if !ok {
-		log.Printf("error environment variable %s not set", _tableNameEnv)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error environment variable %s not set", _tableNameEnv))
 	}
 
-	sess := session.Must(session.NewSession())
-	db := dynamodb.New(sess)
-	ivsSvc := ivs.New(sess)
-
-	repo := repository.New(tableName, db)
-	broadcaster := broadcast.New(ivsSvc)
+	repo := repository.New(tableName, &db)
+	broadcaster := broadcast.New(&ivsClient)
 
 	svc := service.New(repo, broadcaster)
 
 	validate, trans, err := validator.NewValidator("en")
 	if err != nil {
-		log.Printf("error creating validator: %s", err)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error creating validator: %s", err))
 	}
 
 	var submitPollReq submitVoteRequest
 	if err := json.Unmarshal([]byte(request.Body), &submitPollReq); err != nil {
-		log.Printf("error unmarshalling request body: %s", err)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error unmarshalling request body: %s", err))
 	}
 	submitPollReq.PollID = pollID
 
@@ -70,13 +74,10 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 		jsonErrMap, err := json.Marshal(errMap)
 		if err != nil {
-			return api.InternalServerErrorResponse(), nil
+			return api.ServerError(fmt.Errorf("error: %w", err))
 		}
 
-		return events.APIGatewayProxyResponse{
-			Body:       string(jsonErrMap),
-			StatusCode: http.StatusBadRequest,
-		}, nil
+		return api.ClientError(http.StatusBadRequest, string(jsonErrMap))
 	}
 
 	_, err = svc.CreatePollVote(ctx, service.NewPollVote{
@@ -85,8 +86,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		Answer: submitPollReq.Answer,
 	})
 	if err != nil {
-		log.Printf("error creating poll vote: %s", err)
-		return api.InternalServerErrorResponse(), nil
+		return api.ServerError(fmt.Errorf("error creating poll bote: %s", err))
 	}
 
 	return events.APIGatewayProxyResponse{

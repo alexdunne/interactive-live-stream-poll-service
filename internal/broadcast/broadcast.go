@@ -3,12 +3,11 @@ package broadcast
 import (
 	"context"
 
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/ivs"
+	"github.com/aws/aws-sdk-go-v2/service/ivs"
 )
 
 type MetadataPutter interface {
-	PutMetadataWithContext(ctx context.Context, input *ivs.PutMetadataInput, opts ...request.Option) (*ivs.PutMetadataOutput, error)
+	PutMetadata(ctx context.Context, params *ivs.PutMetadataInput, optFns ...func(*ivs.Options)) (*ivs.PutMetadataOutput, error)
 }
 
 type service struct {
@@ -22,7 +21,7 @@ func New(mp MetadataPutter) *service {
 }
 
 func (s *service) Broadcast(ctx context.Context, channelARN string, data string) error {
-	_, err := s.broadcaster.PutMetadataWithContext(ctx, &ivs.PutMetadataInput{
+	_, err := s.broadcaster.PutMetadata(ctx, &ivs.PutMetadataInput{
 		ChannelArn: &channelARN,
 		Metadata:   &data,
 	})

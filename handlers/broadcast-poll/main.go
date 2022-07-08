@@ -9,9 +9,20 @@ import (
 	"github.com/alexdunne/interactive-live-stream-poll-service/internal/utils"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ivs"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ivs"
 )
+
+var ivsClient ivs.Client
+
+func init() {
+	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ivsClient = *ivs.NewFromConfig(sdkConfig)
+}
 
 type poll struct {
 	ID         string `json:"id"`
@@ -19,8 +30,7 @@ type poll struct {
 }
 
 func handle(ctx context.Context, event events.DynamoDBEvent) error {
-	svc := ivs.New(session.Must(session.NewSession()))
-	broadcaster := broadcast.New(svc)
+	broadcaster := broadcast.New(&ivsClient)
 
 	for _, record := range event.Records {
 		var p poll

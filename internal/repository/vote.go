@@ -3,23 +3,22 @@ package repository
 import (
 	"context"
 	"fmt"
-	"strconv"
-	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/google/uuid"
 )
 
 type DatabasePollVote struct {
-	PK       string `json:"PK"`
-	SK       string `json:"SK"`
-	ID       string `json:"id"`
-	ItemType string `json:"itemType"`
-	PollID   string `json:"pollId"`
-	UserID   string `json:"userId"`
-	Answer   string `json:"answer"`
+	PK       string `dynamodbav:"PK"`
+	SK       string `dynamodbav:"SK"`
+	ID       string `dynamodbav:"id"`
+	ItemType string `dynamodbav:"itemType"`
+	PollID   string `dynamodbav:"pollId"`
+	UserID   string `dynamodbav:"userId"`
+	Answer   string `dynamodbav:"answer"`
 }
 
 type NewPollVote struct {
@@ -43,17 +42,17 @@ func (r *repo) CreatePollVote(ctx context.Context, v NewPollVote) (DatabasePollV
 		Answer:   v.Answer,
 	}
 
-	av, err := dynamodbattribute.MarshalMap(dbVote)
+	item, err := attributevalue.MarshalMap(dbVote)
 	if err != nil {
-		return DatabasePollVote{}, fmt.Errorf("marshalling new vote: %w", err)
+		return DatabasePollVote{}, fmt.Errorf("marshalling new povotell: %w", err)
 	}
 
 	input := &dynamodb.PutItemInput{
-		Item:      av,
 		TableName: r.tableName,
+		Item:      item,
 	}
 
-	_, err = r.db.PutItem(input)
+	_, err = r.db.PutItem(ctx, input)
 	if err != nil {
 		return DatabasePollVote{}, fmt.Errorf("calling PutItem for vote: %w", err)
 	}
@@ -68,15 +67,18 @@ type updateItemResponse struct {
 func (r *repo) IncrementPollTotals(ctx context.Context, pollID string, answerIncrements DatabasePollTotals) (DatabasePollTotals, error) {
 	pollKey := buildPollDatabaseKey(pollID)
 
-	input := r.getPollAnswerIncrementInput(pollKey, answerIncrements)
+	input, err := r.getPollAnswerIncrementInput(pollKey, answerIncrements)
+	if err != nil {
+		return nil, fmt.Errorf("creating increment update input %w", err)
+	}
 
-	res, err := r.db.UpdateItemWithContext(ctx, input)
+	res, err := r.db.UpdateItem(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("updating vote aggregate totals %w", err)
 	}
 
 	var updateItemRes updateItemResponse
-	if err := dynamodbattribute.UnmarshalMap(res.Attributes, &updateItemRes); err != nil {
+	if err := attributevalue.UnmarshalMap(res.Attributes, &updateItemRes); err != nil {
 		return nil, fmt.Errorf("unmarshalling update item output attributes %w", err)
 
 	}
@@ -84,43 +86,37 @@ func (r *repo) IncrementPollTotals(ctx context.Context, pollID string, answerInc
 	return updateItemRes.AggregatedVoteTotals, nil
 }
 
-func (r *repo) getPollAnswerIncrementInput(pollKey string, pollAnswerIncrements DatabasePollTotals) *dynamodb.UpdateItemInput {
-	index := 0
-	updateExprParts := []string{}
-	attrNames := make(map[string]*string)
-	attrValues := make(map[string]*dynamodb.AttributeValue)
+func (r *repo) getPollAnswerIncrementInput(pollKey string, pollAnswerIncrements DatabasePollTotals) (*dynamodb.UpdateItemInput, error) {
+	builder := expression.UpdateBuilder{}
 
 	for answerID, incr := range pollAnswerIncrements {
-		attrName := fmt.Sprintf("#s%d", index)
-		attrValKey := fmt.Sprintf(":v%d", index)
+		attrName := fmt.Sprintf("aggregatedVoteTotals.%s", answerID)
 
-		updateExprParts = append(
-			updateExprParts,
-			fmt.Sprintf("aggregatedVoteTotals.%s = aggregatedVoteTotals.%s + %s", attrName, attrName, attrValKey),
+		builder = builder.Set(
+			expression.Name(attrName),
+			expression.Value(fmt.Sprintf("%s + %d", attrName, incr)),
 		)
-		attrNames[attrName] = aws.String(answerID)
-		attrValues[attrValKey] = &dynamodb.AttributeValue{
-			N: aws.String(strconv.Itoa(incr)),
-		}
-
-		index = index + 1
 	}
 
-	updateExpr := fmt.Sprintf("set %s", strings.Join(updateExprParts, ","))
+	expr, err := expression.NewBuilder().WithUpdate(builder).Build()
+	if err != nil {
+		return nil, fmt.Errorf("building expression: %w", err)
+	}
 
 	return &dynamodb.UpdateItemInput{
 		TableName: r.tableName,
-		Key: map[string]*dynamodb.AttributeValue{
-			"PK": {
-				S: aws.String(pollKey),
+		Key: map[string]types.AttributeValue{
+			"PK": &types.AttributeValueMemberS{
+				Value: pollKey,
 			},
-			"SK": {
-				S: aws.String(pollKey),
+			"SK": &types.AttributeValueMemberS{
+				Value: pollKey,
 			},
 		},
-		UpdateExpression:          aws.String(updateExpr),
-		ExpressionAttributeNames:  attrNames,
-		ExpressionAttributeValues: attrValues,
-		ReturnValues:              aws.String("UPDATED_NEW"),
-	}
+		UpdateExpression:          expr.Update(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ConditionExpression:       expr.Condition(),
+		ReturnValues:              types.ReturnValueUpdatedNew,
+	}, nil
 }
